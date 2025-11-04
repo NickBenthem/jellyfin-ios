@@ -9,6 +9,7 @@
 import { MediaType } from '@jellyfin/sdk/lib/generated-client/models/media-type';
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS, Video, VideoFullscreenUpdate } from 'expo-av';
 import React, { useEffect, useRef, useState } from 'react';
+import { useRemoteMediaClient } from 'react-native-google-cast';
 import { Alert } from 'react-native';
 
 import { useStores } from '../hooks/useStores';
@@ -16,6 +17,7 @@ import { msToTicks } from '../utils/Time';
 
 const VideoPlayer = () => {
 	const { rootStore, mediaStore } = useStores();
+	const castClient = useRemoteMediaClient();
 
 	const player = useRef(null);
 	// Local player fullscreen state
@@ -33,7 +35,7 @@ const VideoPlayer = () => {
 
 	// Update the player when media type or uri changes
 	useEffect(() => {
-		if (mediaStore.type === MediaType.Video) {
+		if (mediaStore.type === MediaType.Video && !castClient) {
 			rootStore.set({ didPlayerCloseManually: true });
 			player.current?.loadAsync({
 				uri: mediaStore.uri
@@ -41,8 +43,10 @@ const VideoPlayer = () => {
 				positionMillis: mediaStore.getPositionMillis(),
 				shouldPlay: true
 			});
+		} else if (mediaStore.type === MediaType.Video && castClient) {
+			console.debug('[VideoPlayer] Skipping local playback while casting');
 		}
-	}, [ mediaStore.type, mediaStore.uri ]);
+	}, [ mediaStore.type, mediaStore.uri, castClient ]);
 
 	// Update the play/pause state when the store indicates it should
 	useEffect(() => {

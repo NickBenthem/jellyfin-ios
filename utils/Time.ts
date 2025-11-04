@@ -4,7 +4,10 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 const TICKS_PER_MS = 10000;
+const TICKS_PER_SECOND = 10_000_000;
 
 export const ticksToMs = (ticks = 0) => ticks / TICKS_PER_MS;
 
 export const msToTicks = (ms = 0) => ms * TICKS_PER_MS;
+
+export const ticksToSeconds = (ticks = 0) => ticks / TICKS_PER_SECOND;

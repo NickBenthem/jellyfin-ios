@@ -24,12 +24,54 @@ const ExpoSupportedFeatures = [
 	'fileinput'
 ];
 
+const serializeConsoleArg = (arg) => {
+	if (arg instanceof Error) {
+		return arg.stack || arg.message || String(arg);
+	}
+	const type = typeof arg;
+	if (type === 'string') {
+		return arg;
+	}
+	if (type === 'number' || type === 'boolean' || arg === null || arg === undefined) {
+		return String(arg);
+	}
+	try {
+		return JSON.stringify(arg);
+	} catch (err) {
+		return `[Unserializable:${Object.prototype.toString.call(arg)}]`;
+	}
+};
+
+const forwardConsole = (event, args) => {
+	if (args.length > 0 && typeof args[0] === 'string' && args[0].includes('failed loading plugins')) {
+		const err = args[1];
+		const errMessage = err instanceof Error
+			? `${err.name}: ${err.message}\n${err.stack ?? ''}`
+			: serializeConsoleArg(err);
+		postExpoEvent('pluginError', {
+			message: errMessage || 'Unknown plugin load error',
+			raw: args.slice(1).map(serializeConsoleArg)
+		});
+	}
+	const message = args.length > 1
+		? args.map(serializeConsoleArg).join(' ')
+		: serializeConsoleArg(args[0]);
+	postExpoEvent(event, message);
+};
+
 window.console = Object.assign(window.console, {
-	debug: text => postExpoEvent('console.debug', text),
-	error: text => postExpoEvent('console.error', text),
-	info: text => postExpoEvent('console.info', text),
-	log: text => postExpoEvent('console.log', text),
-	warn: text => postExpoEvent('console.warn', text)
+	debug: (...args) => forwardConsole('console.debug', args),
+	error: (...args) => forwardConsole('console.error', args),
+	info: (...args) => forwardConsole('console.info', args),
+	log: (...args) => forwardConsole('console.log', args),
+	warn: (...args) => forwardConsole('console.warn', args)
+});
+
+document.addEventListener('chromecastloaded', (event) => {
+	console.debug('[NativeShell] chromecastloaded event received');
+	postExpoEvent('chromecast.loaded', {
+		detail: event?.detail ?? null
+	});
 });
 
 window.NativeShell = {
@@ -101,6 +143,33 @@ window.NativeShell = {
 		postExpoEvent('downloadFile', { item: item });
 	},
 
+	execCast: function(action, args, callback) {
+		this.castCallbacks = this.castCallbacks || {};
+		if (callback) {
+			this.castCallbacks[action] = callback;
+		}
+		postExpoEvent('execCast', {
+			action: action,
+			args: args
+		});
+	},
+
+	castCallback: function(action, keep, err, result) {
+		const callbacks = this.castCallbacks || {};
+		const cb = callbacks[action];
+		if (cb) {
+			cb(err || null, result);
+			if (!keep) {
+				delete callbacks[action];
+			}
+			return;
+		}
+
+		if (action === 'forceShowNowPlaying') {
+			window.NativeShell.forceShowNowPlaying?.();
+		}
+	},
+
 	enableFullscreen: function() {
 		postExpoEvent('enableFullscreen');
 	},
@@ -113,10 +182,17 @@ window.NativeShell = {
 		if (!window.ExpoAppSettings.isPluginSupported) {
 			return [];
 		}
-		return [
-			'NativeAudioPlayer',
-			'NativeVideoPlayer'
-		];
+		const plugins = [];
+		if (window.ExpoAppSettings.isNativeVideoPlayerEnabled && typeof window.NativeVideoPlayer === 'function') {
+			plugins.push('NativeVideoPlayer');
+		}
+		if (window.ExpoAppSettings.isExperimentalNativeAudioPlayerEnabled && typeof window.NativeAudioPlayer === 'function') {
+			plugins.push('NativeAudioPlayer');
+		}
+		if (window.NativeShell?.requestCastSessionProxy) {
+			plugins.push('chromecastPlayer/plugin');
+		}
+		return plugins;
 	},
 
 	openUrl: function(url, target) {
@@ -132,5 +208,50 @@ window.NativeShell = {
 
 	hideMediaSession: function() {
 		postExpoEvent('hideMediaSession');
+	},
+
+forceShowNowPlaying: function() {
+		try {
+			if (typeof window.getNowPlayingBar === 'function' && typeof window.slideUp === 'function') {
+				const bar = window.getNowPlayingBar();
+				if (bar) {
+					window.slideUp(bar);
+					return;
+				}
+			}
+			const fallback = document.querySelector('.nowPlayingBar');
+			if (fallback) {
+				fallback.classList.remove('nowPlayingBar-hidden');
+				fallback.classList.remove('hide');
+			}
+		} catch (err) {
+			console.warn('[NativeShell] forceShowNowPlaying failed', err);
+		}
+	},
+
+requestCastSession: function() {
+	postExpoEvent('requestCastSession');
+},
+
+getCastPlayer: function() {
+	return window.NativeShell?.CastBridgePlayer ?? null;
+},
+
+	requestCastSessionProxy: function(successCallback, errorCallback) {
+		console.debug('[NativeShell] requestCastSessionProxy');
+		const action = 'requestSession';
+		window.NativeShell.execCast(action, [], (err, result) => {
+			if (err) {
+				console.warn('[NativeShell] requestCastSessionProxy error', err);
+				if (typeof errorCallback === 'function') {
+					errorCallback(err);
+				}
+				return;
+			}
+			console.debug('[NativeShell] requestCastSessionProxy success', result);
+			if (typeof successCallback === 'function') {
+				successCallback(result);
+			}
+		});
 	}
 };

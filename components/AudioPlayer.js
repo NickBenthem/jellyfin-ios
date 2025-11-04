@@ -9,12 +9,14 @@
 import { MediaType } from '@jellyfin/sdk/lib/generated-client/models/media-type';
 import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from 'expo-av';
 import React, { useEffect, useState } from 'react';
+import { useRemoteMediaClient } from 'react-native-google-cast';
 
 import { useStores } from '../hooks/useStores';
 import { msToTicks } from '../utils/Time';
 
 const AudioPlayer = () => {
 	const { mediaStore } = useStores();
+	const castClient = useRemoteMediaClient();
 
 	const [ player, setPlayer ] = useState();
 
@@ -72,13 +74,15 @@ const AudioPlayer = () => {
 			}
 		};
 
-		if (mediaStore.type === MediaType.Audio) {
+		if (mediaStore.type === MediaType.Audio && !castClient) {
 			createPlayer({
 				uri: mediaStore.uri,
 				positionMillis: mediaStore.getPositionMillis()
 			});
+		} else if (mediaStore.type === MediaType.Audio && castClient) {
+			console.debug('[AudioPlayer] Skipping local audio while casting');
 		}
-	}, [ mediaStore.type, mediaStore.uri ]);
+	}, [ mediaStore.type, mediaStore.uri, castClient ]);
 
 	// Update the play/pause state when the store indicates it should
 	useEffect(() => {

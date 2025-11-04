@@ -130,6 +130,10 @@ jest.mock('@react-navigation/native/lib/commonjs/useLinking.native', () => ({
 import mockSafeAreaContext from 'react-native-safe-area-context/jest/mock';
 jest.mock('react-native-safe-area-context', () => mockSafeAreaContext);
 
+/* Google Cast Mock */
+const mockGoogleCast = require('./__mocks__/react-native-google-cast.js');
+jest.mock('react-native-google-cast', () => mockGoogleCast);
+
 /* UUID Mocks */
 jest.mock('uuid', () => {
 	let value = 0;
