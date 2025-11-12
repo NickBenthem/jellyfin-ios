@@ -31,10 +31,7 @@
       "buildNumber": "1.7.0.8",
       "supportsTablet": true,
       "requireFullScreen": false,
-      "bundleIdentifier": "org.jellyfin.expo",
-      "entitlements": {
-        "com.apple.developer.device-information.user-assigned-device-name": true
-      },
+      "bundleIdentifier": "com.nickbenthem.jellyfin-ios",
       "infoPlist": {
         "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera.",
         "UIBackgroundModes": [
@@ -45,6 +42,14 @@
         "UIFileSharingEnabled": true
       }
     },
+    "plugins": [
+      [
+        "react-native-google-cast",
+        {
+          "iosReceiverAppId": "CC1AD845"
+        }
+      ]
+    ],
     "description": "Jellyfin"
   }
 }

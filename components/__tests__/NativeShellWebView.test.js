@@ -11,12 +11,28 @@ import { useStores } from '../../hooks/useStores';
 import { getAppName, getDeviceProfile, getSafeDeviceName } from '../../utils/Device';
 import NativeShellWebView from '../NativeShellWebView';
 
-jest.mock('../../hooks/useStores');
-useStores.mockImplementation(() => ({
+jest.mock('../../hooks/useStores', () => ({
+	useStores: jest.fn()
+}));
+
+jest.mock('../../bridges/CastBridge', () => ({
+	__esModule: true,
+	default: {
+		init: jest.fn(),
+		handleExecCast: jest.fn()
+	}
+}));
+
+const mockedUseStores = useStores;
+
+mockedUseStores.mockImplementation(() => ({
 	rootStore: {
 	},
 	settingStore: {
-		activeServer: 0
+		activeServer: 0,
+		isNativeVideoPlayerEnabled: true,
+		isExperimentalNativeAudioPlayerEnabled: false,
+		isFmp4Enabled: true
 	},
 	serverStore: {
 		servers: [{

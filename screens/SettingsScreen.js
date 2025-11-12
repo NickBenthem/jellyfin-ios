@@ -12,7 +12,7 @@ import compareVersions from 'compare-versions';
 import React, { useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Platform, SectionList, StyleSheet, View } from 'react-native';
-import { Text, ThemeContext } from 'react-native-elements';
+import { Badge, ListItem, Text, ThemeContext } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import AppInfoFooter from '../components/AppInfoFooter';
@@ -104,6 +104,10 @@ const SettingsScreen = () => {
 			onDelete={onDeleteServer}
 			onPress={onSelectServer}
 		/>
+	);
+
+	const renderSettingsItem = ({ item, index }) => (
+		<SwitchListItem item={item} index={index} />
 	);
 
 	const getSections = () => {
@@ -201,7 +205,7 @@ const SettingsScreen = () => {
 			{
 				title: t('headings.settings'),
 				data: settingsData,
-				renderItem: SwitchListItem
+				renderItem: renderSettingsItem
 			},
 			{
 				title: t('headings.playback'),
@@ -268,7 +272,9 @@ const SettingsScreen = () => {
 					activeServer: settingStore.activeServer,
 					isFetching: isServerInfoPending
 				}}
-				renderItem={({ item }) => <Text>{JSON.stringify(item)}</Text>}
+				renderItem={({ item, index, section, separators }) => (
+					section.renderItem ? section.renderItem({ item, index, section, separators }) : null
+				)}
 				renderSectionHeader={({ section: { data, title, hideHeader } }) => {
 					if (!data || data.length === 0) {
 						return null;
@@ -300,6 +306,17 @@ const SettingsScreen = () => {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1
+	},
+	castButton: {
+		width: 32,
+		height: 32
+	},
+	itemHeader: {
+		flexDirection: 'row',
+		alignItems: 'center'
+	},
+	badge: {
+		marginStart: 8
 	},
 	header: {
 		fontWeight: '600',

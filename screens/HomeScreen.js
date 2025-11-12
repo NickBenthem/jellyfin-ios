@@ -12,15 +12,18 @@ import React, { useCallback, useContext, useEffect, useRef, useState } from 'rea
 import { useTranslation } from 'react-i18next';
 import { BackHandler, Platform, StyleSheet, View } from 'react-native';
 import { ThemeContext } from 'react-native-elements';
+import { CastButton } from 'react-native-google-cast';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import AudioPlayer from '../components/AudioPlayer';
+import CastManager from '../components/CastManager';
 import ErrorView from '../components/ErrorView';
 import NativeShellWebView from '../components/NativeShellWebView';
 import VideoPlayer from '../components/VideoPlayer';
 import Colors from '../constants/Colors';
 import { Screens } from '../constants/Screens';
 import { useStores } from '../hooks/useStores';
+import { useCastDeviceAvailability } from '../hooks/useCastDeviceAvailability';
 import { getIconName } from '../utils/Icons';
 
 const HomeScreen = () => {
@@ -34,6 +37,7 @@ const HomeScreen = () => {
 	const [ httpErrorStatus, setHttpErrorStatus ] = useState(null);
 
 	const webview = useRef(null);
+	useCastDeviceAvailability(webview);
 
 	useEffect(() => {
 		// Pressing the Home tab when it is already active navigates to home screen in webview
@@ -134,6 +138,8 @@ const HomeScreen = () => {
 		}
 	}
 
+	const castButtonTopOffset = rootStore.isFullscreen ? 0 : (Platform.OS === 'ios' ? insets.top : (safeAreaPadding.paddingTop ?? insets.top));
+
 	// Hide webview until loaded
 	const webviewStyle = (isLoading || httpErrorStatus) ? StyleSheet.compose(styles.container, styles.loading) : styles.container;
 
@@ -155,6 +161,25 @@ const HomeScreen = () => {
 					backgroundColor: theme.colors.grey0,
 					height: insets.top
 				}} />
+			)}
+			{!rootStore.isFullscreen && (
+				<View
+					pointerEvents='box-none'
+					style={[
+						styles.nativeCastButtonWrapper,
+						{
+							top: castButtonTopOffset + 8
+						}
+					]}>
+					{/* We still use this button, but we overwrite the web player's Chromecast icon */}
+					<CastButton
+						pointerEvents='none'
+						style={[
+							styles.castButton,
+							styles.hiddenCastButton
+						]}
+					/>
+				</View>
 			)}
 			{server && server.urlString ? (
 				<>
@@ -215,6 +240,7 @@ const HomeScreen = () => {
 							webview.current?.reload();
 						}}
 					/>
+					<CastManager />
 					<AudioPlayer/>
 					<VideoPlayer/>
 				</>
@@ -234,6 +260,21 @@ const styles = StyleSheet.create({
 	},
 	loading: {
 		opacity: 0
+	},
+	nativeCastButtonWrapper: {
+		position: 'absolute',
+		right: 16,
+		zIndex: 10
+	},
+	castButton: {
+		width: 24,
+		height: 24,
+		tintColor: '#fff'
+	},
+	hiddenCastButton: {
+		opacity: 0,
+		width: 0,
+		height: 0
 	}
 });
 

@@ -7,6 +7,8 @@
  */
 
 import { MediaType } from '@jellyfin/sdk/lib/generated-client/models/media-type';
+import type { BaseItemDto } from '@jellyfin/sdk/lib/generated-client/models/base-item-dto';
+import type { MediaSourceInfo } from '@jellyfin/sdk/lib/generated-client/models/media-source-info';
 import { create } from 'zustand';
 
 import { ticksToMs } from '../utils/Time';
@@ -40,6 +42,21 @@ type State = {
 
 	/** The player should stop playback */
 	shouldStop: boolean,
+
+	/** Source item metadata */
+	item: Partial<BaseItemDto> | null,
+
+	/** Original media source metadata */
+	mediaSource: Partial<MediaSourceInfo> | null,
+
+	/** Jellyfin play session id */
+	playSessionId: string | null,
+
+	/** Preferred audio stream index */
+	audioStreamIndex: number | null,
+
+	/** Preferred subtitle stream index */
+	subtitleStreamIndex: number | null
 }
 
 type Actions = {
@@ -65,7 +82,12 @@ const initialState: State = {
 	isPlaying: false,
 	positionTicks: 0,
 	shouldPlayPause: false,
-	shouldStop: false
+	shouldStop: false,
+	item: null,
+	mediaSource: null,
+	playSessionId: null,
+	audioStreamIndex: null,
+	subtitleStreamIndex: null
 };
 
 export const useMediaStore = create<State & Actions>()(
